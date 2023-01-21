@@ -2,10 +2,13 @@
 #define SYSTEM_HPP
 
 #include <exception>
+#include <mutex>
+#include <condition_variable>
+#include <future>
+#include <functional>
+#include <queue>
 #include <vector>
 #include <unordered_map>
-#include <functional>
-#include <future>
 
 #include "machine.hpp"
 
@@ -43,6 +46,11 @@ struct WorkerReport
 
 class CoasterPager
 {
+private:
+    unsigned int id;
+    bool ready;
+    mutable std::mutex mut;
+    mutable std::condition_variable cv;
 public:
     void wait() const;
 
@@ -71,6 +79,14 @@ public:
     std::vector<std::unique_ptr<Product>> collectOrder(std::unique_ptr<CoasterPager> CoasterPager);
 
     unsigned int getClientTimeout() const;
+private:
+    machines_t machines;
+    std::vector<std::string> menu;
+    unsigned int numberOfWorkers;
+    unsigned int clientTimeout;
+    std::vector<std::thread> workers;
+    mutable std::mutex queue_mutex;
+    std::vector<unsigned int> pendingOrders;
 };
 
 #endif // SYSTEM_HPP
