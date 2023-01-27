@@ -9,6 +9,7 @@
 #include <queue>
 #include <vector>
 #include <unordered_map>
+#include <map>
 
 #include "machine.hpp"
 
@@ -47,8 +48,10 @@ struct WorkerReport
 class CoasterPager
 {
 private:
-    unsigned int id;
+    friend class System;
     bool ready;
+    unsigned int id;
+    std::vector<std::string> products;
     mutable std::mutex mut;
     mutable std::condition_variable cv;
 public:
@@ -80,13 +83,28 @@ public:
 
     unsigned int getClientTimeout() const;
 private:
+    using product_ordered = std::vector<std::unique_ptr<Product>>;
+
     machines_t machines;
-    std::vector<std::string> menu;
     unsigned int numberOfWorkers;
     unsigned int clientTimeout;
+    std::vector<std::string> menu;
     std::vector<std::thread> workers;
-    mutable std::mutex queue_mutex;
+
+    unsigned int current_order_id{};
     std::vector<unsigned int> pendingOrders;
+
+    std::queue<std::unique_ptr<CoasterPager>> orders;
+    std::map<std::string, std::queue<unsigned int>> machines_queues;
+    std::map<std::string, std::condition_variable> machines_variables;
+    std::map<std::string, std::mutex> machines_mutexes;
+    std::map<unsigned int, std::tuple<std::mutex, std::condition_variable, bool>> client_collecting;
+    std::map<unsigned int, std::future<product_ordered>> futures;
+
+    mutable std::mutex workers_mutex;
+    mutable std::mutex orders_mutex;
+
+    void run(unsigned int id, std::promise<product_ordered> promise);
 };
 
 #endif // SYSTEM_HPP
