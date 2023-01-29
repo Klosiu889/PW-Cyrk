@@ -10,45 +10,39 @@
 #include <vector>
 #include <unordered_map>
 #include <map>
+#include <list>
 
 #include "machine.hpp"
 
-class FulfillmentFailure : public std::exception
-{
+class FulfillmentFailure : public std::exception {
 };
 
-class OrderNotReadyException : public std::exception
-{
+class OrderNotReadyException : public std::exception {
 };
 
-class BadOrderException : public std::exception
-{
+class BadOrderException : public std::exception {
 };
 
-class BadPagerException : public std::exception
-{
+class BadPagerException : public std::exception {
 };
 
-class OrderExpiredException : public std::exception
-{
+class OrderExpiredException : public std::exception {
 };
 
-class RestaurantClosedException : public std::exception
-{
+class RestaurantClosedException : public std::exception {
 };
 
-struct WorkerReport
-{
+struct WorkerReport {
     std::vector<std::vector<std::string>> collectedOrders;
     std::vector<std::vector<std::string>> abandonedOrders;
     std::vector<std::vector<std::string>> failedOrders;
     std::vector<std::string> failedProducts;
 };
 
-class CoasterPager
-{
+class CoasterPager {
 private:
     friend class System;
+
     bool ready{};
     unsigned int id{};
     std::vector<std::string> products;
@@ -64,12 +58,12 @@ public:
     [[nodiscard]] bool isReady() const;
 };
 
-class System
-{
+class System {
 public:
     typedef std::unordered_map<std::string, std::shared_ptr<Machine>> machines_t;
-    
-    System(machines_t machines, unsigned int numberOfWorkers, unsigned int clientTimeout);
+
+    System(machines_t machines, unsigned int numberOfWorkers,
+           unsigned int clientTimeout);
 
     std::vector<WorkerReport> shutdown();
 
@@ -79,9 +73,11 @@ public:
 
     std::unique_ptr<CoasterPager> order(std::vector<std::string> products);
 
-    std::vector<std::unique_ptr<Product>> collectOrder(std::unique_ptr<CoasterPager> CoasterPager);
+    std::vector<std::unique_ptr<Product>>
+    collectOrder(std::unique_ptr<CoasterPager> CoasterPager);
 
     unsigned int getClientTimeout() const;
+
 private:
     using product_ordered = std::vector<std::unique_ptr<Product>>;
 
@@ -92,7 +88,7 @@ private:
     std::vector<std::thread> workers;
 
     unsigned int current_order_id{};
-    std::queue<unsigned int> pending_orders;
+    std::list<unsigned int> pending_orders;
     std::map<unsigned int, std::unique_ptr<CoasterPager>> pagers;
     std::map<std::string, std::queue<unsigned int>> machines_queues;
     std::map<std::string, std::condition_variable> machines_variables;
@@ -103,7 +99,7 @@ private:
     mutable std::mutex workers_mutex;
     mutable std::mutex orders_mutex;
 
-    void run(unsigned int id, std::promise<product_ordered> promise);
+    void run(unsigned int id, std::promise<product_ordered> &promise);
 };
 
 #endif // SYSTEM_HPP

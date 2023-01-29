@@ -13,13 +13,13 @@
 
 void CoasterPager::wait() const {
     std::unique_lock<std::mutex> lock(mut);
-    cv.wait(lock, [this] { return ready; } );
+    cv.wait(lock, [this] { return ready; });
 }
 
 void CoasterPager::wait(unsigned int timeout) const {
     std::unique_lock<std::mutex> lock(mut);
     std::chrono::milliseconds time(timeout);
-    if (!cv.wait_for(lock, time, [this] { return ready; } ))
+    if (!cv.wait_for(lock, time, [this] { return ready; }))
         throw FulfillmentFailure();
 }
 
@@ -27,12 +27,12 @@ unsigned int CoasterPager::getId() const { return id; }
 
 bool CoasterPager::isReady() const { return ready; }
 
-void System::run(unsigned int id, std::promise<product_ordered> promise) {
+void System::run(unsigned int id, std::promise<product_ordered> &promise) {
     while (true) {
         std::vector<std::unique_ptr<Product>> completing_order;
         std::unique_lock<std::mutex> orders_lock(orders_mutex);
         unsigned int order_id = pending_orders.front();
-        pending_orders.pop();
+        pending_orders.pop_front();
         auto order = std::move(pagers.find(order_id)->second);
         for (auto &product_name: order->products)
             machines_queues.find(product_name)->second.push(id);
@@ -73,16 +73,17 @@ void System::run(unsigned int id, std::promise<product_ordered> promise) {
 }
 
 System::System(machines_t machines, unsigned int numberOfWorkers,
-               unsigned int clientTimeout):
-    machines(std::move(machines)),
-    numberOfWorkers(numberOfWorkers),
-    clientTimeout(clientTimeout)
-{
-    for (const auto& machine: this->machines)
+               unsigned int clientTimeout) :
+        machines(std::move(machines)),
+        numberOfWorkers(numberOfWorkers),
+        clientTimeout(clientTimeout) {
+    for (const auto &machine: this->machines)
         menu.push_back(machine.first);
 
     for (unsigned int i = 0; i < numberOfWorkers; i++) {
-        //TODO
+        std::promise<product_ordered> promise;
+        std::future<product_ordered> future = promise.get_future();
+        std::thread worker{[&] { run(i, promise); }};
     }
 
 }
@@ -99,7 +100,9 @@ std::vector<std::string> System::getMenu() const {
 std::vector<unsigned int> System::getPendingOrders() const {
     std::vector<unsigned int> result;
     std::unique_lock<std::mutex> lock(orders_mutex);
-    //TODO
+    for (auto order: pending_orders) {
+        result.emplace_back(order);
+    }
     lock.unlock();
 
     return result;
@@ -110,20 +113,17 @@ unsigned int System::getClientTimeout() const {
 }
 
 std::unique_ptr<CoasterPager> System::order(std::vector<std::string> products) {
-    (void)products;
     std::unique_lock<std::mutex> lock(orders_mutex);
     std::unique_ptr<CoasterPager> order_pager(std::make_unique<CoasterPager>());
-    std::vector<std::string> products_copy(std::move(products));
     order_pager->id = current_order_id;
+    order_pager->products = std::move(products);
     current_order_id++;
     lock.unlock();
 
     return order_pager;
-    return {};
 }
 
 std::vector<std::unique_ptr<Product>>
 System::collectOrder(std::unique_ptr<CoasterPager> CoasterPager) {
-    (void)(CoasterPager);
     return {};
 }
