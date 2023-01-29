@@ -49,8 +49,8 @@ class CoasterPager
 {
 private:
     friend class System;
-    bool ready;
-    unsigned int id;
+    bool ready{};
+    unsigned int id{};
     std::vector<std::string> products;
     mutable std::mutex mut;
     mutable std::condition_variable cv;
@@ -92,9 +92,8 @@ private:
     std::vector<std::thread> workers;
 
     unsigned int current_order_id{};
-    std::vector<unsigned int> pendingOrders;
-
-    std::queue<std::unique_ptr<CoasterPager>> orders;
+    std::queue<unsigned int> pending_orders;
+    std::map<unsigned int, std::unique_ptr<CoasterPager>> pagers;
     std::map<std::string, std::queue<unsigned int>> machines_queues;
     std::map<std::string, std::condition_variable> machines_variables;
     std::map<std::string, std::mutex> machines_mutexes;

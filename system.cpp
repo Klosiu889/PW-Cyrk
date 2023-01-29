@@ -4,7 +4,6 @@
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
-#include <unordered_map>
 #include <functional>
 #include <future>
 #include <set>
@@ -32,8 +31,9 @@ void System::run(unsigned int id, std::promise<product_ordered> promise) {
     while (true) {
         std::vector<std::unique_ptr<Product>> completing_order;
         std::unique_lock<std::mutex> orders_lock(orders_mutex);
-        auto order = std::move(orders.front());
-        orders.pop();
+        unsigned int order_id = pending_orders.front();
+        pending_orders.pop();
+        auto order = std::move(pagers.find(order_id)->second);
         for (auto &product_name: order->products)
             machines_queues.find(product_name)->second.push(id);
         orders_lock.unlock();
@@ -82,11 +82,14 @@ System::System(machines_t machines, unsigned int numberOfWorkers,
         menu.push_back(machine.first);
 
     for (unsigned int i = 0; i < numberOfWorkers; i++) {
-        std::promise<product_ordered> promise;
-        futures.insert({i, promise.get_future()});
-        workers.emplace_back([this, i, &promise]{ run(i, promise); });
+        //TODO
     }
 
+}
+
+std::vector<WorkerReport> System::shutdown() {
+    //TODO
+    return {};
 }
 
 std::vector<std::string> System::getMenu() const {
@@ -96,7 +99,7 @@ std::vector<std::string> System::getMenu() const {
 std::vector<unsigned int> System::getPendingOrders() const {
     std::vector<unsigned int> result;
     std::unique_lock<std::mutex> lock(orders_mutex);
-    std::copy(pendingOrders.begin(), pendingOrders.end(), result.begin());
+    //TODO
     lock.unlock();
 
     return result;
@@ -107,17 +110,20 @@ unsigned int System::getClientTimeout() const {
 }
 
 std::unique_ptr<CoasterPager> System::order(std::vector<std::string> products) {
+    (void)products;
     std::unique_lock<std::mutex> lock(orders_mutex);
-    current_order_id++;
-    std::unique_ptr<CoasterPager> order_pager(new CoasterPager());
+    std::unique_ptr<CoasterPager> order_pager(std::make_unique<CoasterPager>());
     std::vector<std::string> products_copy(std::move(products));
-    orders.emplace(order_pager, products_copy);
+    order_pager->id = current_order_id;
+    current_order_id++;
     lock.unlock();
 
     return order_pager;
+    return {};
 }
 
 std::vector<std::unique_ptr<Product>>
 System::collectOrder(std::unique_ptr<CoasterPager> CoasterPager) {
-
+    (void)(CoasterPager);
+    return {};
 }
