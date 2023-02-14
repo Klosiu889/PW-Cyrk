@@ -196,6 +196,7 @@ std::vector<WorkerReport> System::shutdown() {
         worker.join();
     }
 
+    std::cout << "Shutting down machines...\n";
     for (auto &machine: machines) {
         machine.second->stop();
     }
