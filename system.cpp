@@ -131,6 +131,10 @@ void System::run() {
 
         OrderStatus status = *orders_data[id]->status;
 
+        lock.lock();
+        orders_in_progress.erase(id);
+        lock.unlock();
+
         lock2.unlock();
 
         switch (status) {
@@ -146,10 +150,6 @@ void System::run() {
             default:
                 break;
         }
-
-        lock.lock();
-        orders_in_progress.erase(id);
-        lock.unlock();
 
         if (status == OrderStatus::FAILED || status == OrderStatus::EXPIRED) {
             std::unique_lock<std::mutex> lock3(machines_mutex);
