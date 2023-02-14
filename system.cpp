@@ -7,9 +7,7 @@
 #include <functional>
 #include <future>
 #include <set>
-#include <iostream>
 #include <algorithm>
-#include <typeinfo>
 
 #include "system.hpp"
 
