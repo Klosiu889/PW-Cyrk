@@ -123,6 +123,7 @@ private:
     mutable std::condition_variable pending_orders_cv;
     unsigned int current_order_id{};
     std::list<long long> pending_orders;
+    std::set<unsigned int> orders_in_progress;
     std::map<unsigned int, std::vector<std::string>> orders_products;
 
     mutable std::mutex orders_mutex;

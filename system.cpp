@@ -147,6 +147,10 @@ void System::run() {
                 break;
         }
 
+        lock.lock();
+        orders_in_progress.erase(id);
+        lock.unlock();
+
         if (status == OrderStatus::FAILED || status == OrderStatus::EXPIRED) {
             std::unique_lock<std::mutex> lock3(machines_mutex);
             for (auto &pair: collecting) {
@@ -214,8 +218,8 @@ std::vector<std::string> System::getMenu() const {
 std::vector<unsigned int> System::getPendingOrders() const {
     std::vector<unsigned int> result;
     std::unique_lock<std::mutex> lock(pending_orders_mutex);
-    for (auto order: pending_orders) {
-        if (order != -1) result.emplace_back(order);
+    for (auto order: orders_in_progress) {
+        result.emplace_back(order);
     }
     lock.unlock();
 
@@ -259,6 +263,7 @@ std::unique_ptr<CoasterPager> System::order(std::vector<std::string> products) {
 
     pending_orders.push_back(order_pager->id);
     pending_orders_cv.notify_all();
+    orders_in_progress.insert(order_pager->id);
 
     lock.unlock();
 
