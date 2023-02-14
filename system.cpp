@@ -275,8 +275,6 @@ System::collectOrder(std::unique_ptr<CoasterPager> CoasterPager) {
     orders_data[id]->client_collecting = true;
     orders_data[id]->cv.notify_all();
 
-    orders_data[id]->collect_cv.wait(lock, [id, this]{ return orders_data[id]->ready_to_collect; });
-
     switch (*order->second->status) {
         case READY:
             break;
@@ -288,6 +286,7 @@ System::collectOrder(std::unique_ptr<CoasterPager> CoasterPager) {
             throw OrderExpiredException();
     }
 
+    orders_data[id]->collect_cv.wait(lock, [id, this]{ return orders_data[id]->ready_to_collect; });
 
     auto result = std::move(orders_data[id]->completed);
     orders_data.erase(id);
