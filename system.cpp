@@ -184,6 +184,7 @@ System::System(machines_t machines, unsigned int numberOfWorkers,
 }
 
 std::vector<WorkerReport> System::shutdown() {
+    if (!is_open) return std::move(reports);
     reports.clear();
 
     std::unique_lock<std::mutex> lock(pending_orders_mutex);
