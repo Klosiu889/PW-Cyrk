@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <map>
 #include <list>
+#include <set>
 
 #include "machine.hpp"
 
@@ -39,15 +40,23 @@ struct WorkerReport {
     std::vector<std::string> failedProducts;
 };
 
+enum OrderStatus {
+    READY,
+    IN_PROGRES,
+    FAILED,
+    EXPIRED
+};
+
 class CoasterPager {
 private:
     friend class System;
 
-    bool ready{};
+    std::shared_ptr<OrderStatus> status{
+            std::make_shared<OrderStatus>(IN_PROGRES)};
     unsigned int id{};
-    std::vector<std::string> products;
     mutable std::mutex mut;
-    mutable std::condition_variable cv;
+    mutable std::shared_ptr<std::condition_variable> cv{
+            std::make_shared<std::condition_variable>()};
 public:
     void wait() const;
 
@@ -79,27 +88,53 @@ public:
     unsigned int getClientTimeout() const;
 
 private:
-    using product_ordered = std::vector<std::unique_ptr<Product>>;
+    struct OrderData {
+        std::vector<std::unique_ptr<Product>> completed;
+        std::shared_ptr<OrderStatus> status;
+        mutable std::mutex mut;
+        mutable std::condition_variable cv;
+        mutable std::shared_ptr<std::condition_variable> pager_cv;
+        bool client_collecting{false};
+        mutable std::condition_variable collect_cv;
+        bool ready_to_collect{false};
+    };
+
+    struct MachineData {
+        mutable std::mutex mut;
+        mutable std::condition_variable cv;
+        std::queue<std::pair<unsigned int, unsigned int>> waiting;
+    };
+
+    bool is_open;
 
     machines_t machines;
     unsigned int numberOfWorkers;
     unsigned int clientTimeout;
-    std::vector<std::string> menu;
+    mutable std::mutex menu_mutex;
+    std::set<std::string> menu;
     std::vector<std::thread> workers;
+    mutable std::mutex reports_mutex;
+    std::vector<WorkerReport> reports;
 
+    std::mutex machines_mutex;
+    std::map<std::string, std::shared_ptr<MachineData>> machines_data;
+
+    mutable std::mutex pending_orders_mutex;
+    mutable std::condition_variable pending_orders_cv;
     unsigned int current_order_id{};
-    std::list<unsigned int> pending_orders;
-    std::map<unsigned int, std::unique_ptr<CoasterPager>> pagers;
-    std::map<std::string, std::queue<unsigned int>> machines_queues;
-    std::map<std::string, std::condition_variable> machines_variables;
-    std::map<std::string, std::mutex> machines_mutexes;
-    std::map<unsigned int, std::tuple<std::mutex, std::condition_variable, bool>> client_collecting;
-    std::map<unsigned int, std::future<product_ordered>> futures;
+    std::list<long long> pending_orders;
+    std::map<unsigned int, std::vector<std::string>> orders_products;
 
-    mutable std::mutex workers_mutex;
     mutable std::mutex orders_mutex;
+    std::map<unsigned int, std::shared_ptr<OrderData>> orders_data;
 
-    void run(unsigned int id, std::promise<product_ordered> &promise);
+    void collectProduct(unsigned int order_id, unsigned int my_id,
+                        std::string &product_name,
+                        WorkerReport &report,
+                        std::vector<std::pair<std::string, std::unique_ptr<Product>>> &collecting,
+                        std::mutex &mutex);
+
+    void run();
 };
 
 #endif // SYSTEM_HPP
