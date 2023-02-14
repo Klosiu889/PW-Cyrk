@@ -199,9 +199,9 @@ std::vector<WorkerReport> System::shutdown() {
     for (auto &machine: machines) {
         machine.second->stop();
     }
-    std::cout << "Shutting down machines...\n";
 
     menu.clear();
+    std::cout << "Shutting down machines...2\n";
 
     return std::move(reports);
 }
