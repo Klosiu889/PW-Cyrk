@@ -279,9 +279,6 @@ System::collectOrder(std::unique_ptr<CoasterPager> CoasterPager) {
     auto order = orders_data.find(id);
     if (order == orders_data.end()) throw BadPagerException();
 
-    orders_data[id]->client_collecting = true;
-    orders_data[id]->cv.notify_all();
-
     switch (*order->second->status) {
         case READY:
             break;
@@ -292,6 +289,9 @@ System::collectOrder(std::unique_ptr<CoasterPager> CoasterPager) {
         case EXPIRED:
             throw OrderExpiredException();
     }
+
+    orders_data[id]->client_collecting = true;
+    orders_data[id]->cv.notify_all();
 
     orders_data[id]->collect_cv.wait(lock, [id, this]{ return orders_data[id]->ready_to_collect; });
 
