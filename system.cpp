@@ -195,6 +195,8 @@ std::vector<WorkerReport> System::shutdown() {
         machine.second->stop();
     }
 
+    menu.clear();
+
     return std::move(reports);
 }
 
@@ -213,7 +215,7 @@ std::vector<unsigned int> System::getPendingOrders() const {
     std::vector<unsigned int> result;
     std::unique_lock<std::mutex> lock(pending_orders_mutex);
     for (auto order: pending_orders) {
-        result.emplace_back(order);
+        if (order != -1) result.emplace_back(order);
     }
     lock.unlock();
 
