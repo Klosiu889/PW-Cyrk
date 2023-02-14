@@ -201,7 +201,6 @@ std::vector<WorkerReport> System::shutdown() {
     }
 
     menu.clear();
-    std::cout << "Shutting down machines...2\n";
 
     return std::move(reports);
 }
@@ -274,6 +273,7 @@ std::unique_ptr<CoasterPager> System::order(std::vector<std::string> products) {
 
 std::vector<std::unique_ptr<Product>>
 System::collectOrder(std::unique_ptr<CoasterPager> CoasterPager) {
+    if (CoasterPager == nullptr) throw BadPagerException();
     auto id = CoasterPager->id;
 
     std::unique_lock<std::mutex> lock(orders_mutex);
